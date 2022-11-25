@@ -16,6 +16,7 @@ const run = async () => {
         const categoryCollection = client.db('motoDreamDB').collection('category')
         const categoryItemsCollection = client.db('motoDreamDB').collection('products')
         const usersCollection = client.db('motoDreamDB').collection('users')
+        const bookedCollection = client.db('motoDreamDB').collection('bookedProducts')
         app.get('/category', async (req, res) => {
             const query = {};
             const category = await categoryCollection.find(query).toArray();
@@ -32,6 +33,11 @@ const run = async () => {
         app.post('/users', async(req, res) => {
             const user = req.body;
             const result = await usersCollection.insertOne(user);
+            res.send(result);
+        })
+        app.post('/bookedProducts', async(req, res) => {
+            const product = req.body;
+            const result = await bookedCollection.insertOne(product);
             res.send(result);
         })
     }
