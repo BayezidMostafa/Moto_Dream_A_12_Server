@@ -117,11 +117,11 @@ const run = async () => {
             const user = await usersCollection.findOne({ email });
             res.send(user)
         })
-        // app.post('/addProduct', async(req, res) => {
-        //     const product = req.body;
-        //     const result = await categoryItemsCollection.insertOne(product);
-        //     res.send(result);
-        // })
+        app.post('/addProduct', async(req, res) => {
+            const product = req.body;
+            const result = await categoryItemsCollection.insertOne(product);
+            res.send(result);
+        })
     }
     catch { }
     finally { }
