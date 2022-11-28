@@ -17,7 +17,6 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 // JWT Middleware
 const verifyJWTAuth = (req, res, next) => {
     const authHeader = req.headers.authorization;
-    console.log('From auth header', authHeader);
     if (!authHeader) {
         return res.status(401).send({ message: 'Unauthorized Access' })
     }
@@ -40,6 +39,7 @@ const run = async () => {
         const usersCollection = client.db('motoDreamDB').collection('users')
         const bookedCollection = client.db('motoDreamDB').collection('bookedProducts')
         const paidCollection = client.db('motoDreamDB').collection('paidProducts')
+        const wishlistCollection = client.db('motoDreamDB').collection('wishlist')
 
         // Admin Verifications
         const verifyAdmin = async (req, res, next) => {
@@ -65,7 +65,6 @@ const run = async () => {
             console.log('seller true');
             next()
         }
-
 
         // JWT AUTHORIZATION
         app.put('/user/:email', async (req, res) => {
@@ -173,7 +172,8 @@ const run = async () => {
         })
         app.post('/create-payment-intent', async (req, res) => {
             const order = req.body;
-            const price = order.price;
+            const price = parseInt(order.price);
+            console.log(typeof (price));
             const amount = price * 100;
 
             const paymentIntent = await stripe.paymentIntents.create({
@@ -213,6 +213,93 @@ const run = async () => {
             }
             const result = await categoryItemsCollection.updateOne(filter, updatedDoc, options)
             res.send(result);
+        })
+        app.put('/wishlist', async (req, res) => {
+            const product = req.body
+            const {
+                picture,
+                email,
+                category_name,
+                name, condition,
+                description,
+                original_price,
+                re_sell_price,
+                product_id
+            } = product;
+            const filter = {
+                picture,
+                email,
+                category_name,
+                name, condition,
+                description,
+                original_price,
+                re_sell_price,
+                product_id,
+                wishlist: true
+            }
+            const options = { upsert: true }
+            const updatedDoc = {
+                $set: {
+                    picture,
+                    email,
+                    category_name,
+                    name, condition,
+                    description,
+                    original_price,
+                    re_sell_price,
+                    product_id,
+                    wishlist: true
+                }
+            }
+            const result = await wishlistCollection.updateOne(filter, updatedDoc, options)
+            res.send(result);
+        })
+        app.get('/wishlisted/:email', async (req, res) => {
+            const email = req.params.email;
+            const filter = { email }
+            const result = await wishlistCollection.find(filter).toArray();
+            res.send(result)
+        })
+        app.get('/allseller', verifyJWTAuth, verifyAdmin, async (req, res) => {
+            const filter = {
+                role: 'seller'
+            }
+            const result = await usersCollection.find(filter).toArray();
+            res.send(result);
+        })
+        app.put('/makeverified/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const options = { upsert: true }
+            const updateDoc = {
+                $set: {
+                    verified: true
+                }
+            }
+            const update = await usersCollection.updateOne(filter, updateDoc, options);
+            res.send(update);
+        })
+        app.put(`/verifytheseller/:email`, verifyJWTAuth, verifyAdmin, async (req, res) => {
+            const email = req.params.email;
+            const filter = {
+                seller_email: email
+            }
+            const options = { upsert: true };
+            const updatedDoc = {
+                $set: {
+                    verified_seller: true
+                }
+            }
+            const result = await categoryItemsCollection.updateMany(filter, updatedDoc, options)
+            res.send(result)
+        })
+        app.delete('/deleteseller/:email', verifyJWTAuth, verifyAdmin, async(req, res) => {
+            const email = req.params.email;
+            const filter = {
+                email: email
+            }
+            const result = await usersCollection.deleteOne(filter);
+            res.send(result)
         })
     }
     catch { }
