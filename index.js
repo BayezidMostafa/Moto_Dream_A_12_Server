@@ -102,9 +102,23 @@ const run = async () => {
             const products = await categoryItemsCollection.find(query).toArray()
             res.send(products);
         })
-        app.post('/users', async (req, res) => {
+        app.put('/users', async (req, res) => {
             const user = req.body;
-            const result = await usersCollection.insertOne(user);
+            const { name, email, role } = user;
+            const filter = {
+                name,
+                email,
+                role
+            }
+            const options = { upsert: true }
+            const updatedDoc = {
+                $set: {
+                    name,
+                    email,
+                    role
+                }
+            }
+            const result = await usersCollection.updateOne(filter, updatedDoc, options);
             res.send(result);
         })
         app.post('/bookedProducts', async (req, res) => {
@@ -112,7 +126,7 @@ const run = async () => {
             const result = await bookedCollection.insertOne(product);
             res.send(result);
         })
-        app.get('/myorders/:email', async (req, res) => {
+        app.get('/myorders/:email', verifyJWTAuth, async (req, res) => {
             const email = req.params.email
             const filter = { email: email }
             const result = await bookedCollection.find(filter).toArray();
@@ -122,6 +136,12 @@ const run = async () => {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) };
             const result = await bookedCollection.findOne(filter);
+            res.send(result);
+        })
+        app.delete('/cancelorder/:id', verifyJWTAuth, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await bookedCollection.deleteOne(filter);
             res.send(result);
         })
         app.get('/users', async (req, res) => {
@@ -151,7 +171,7 @@ const run = async () => {
             const user = await usersCollection.findOne(query);
             res.send({ seller: user?.role === 'seller' });
         })
-        app.put('/advertisement/:id', async (req, res) => {
+        app.put('/advertisement/:id', verifyJWTAuth, verifySeller, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) }
             const options = { upsert: true };
@@ -219,42 +239,34 @@ const run = async () => {
             const {
                 picture,
                 email,
-                category_name,
-                name, condition,
-                description,
-                original_price,
-                re_sell_price,
-                product_id
+                product_name,
+                price,
+                location,
+                booking_id
             } = product;
             const filter = {
                 picture,
                 email,
-                category_name,
-                name, condition,
-                description,
-                original_price,
-                re_sell_price,
-                product_id,
-                wishlist: true
+                product_name,
+                price,
+                location,
+                booking_id
             }
             const options = { upsert: true }
             const updatedDoc = {
                 $set: {
                     picture,
                     email,
-                    category_name,
-                    name, condition,
-                    description,
-                    original_price,
-                    re_sell_price,
-                    product_id,
-                    wishlist: true
+                    product_name,
+                    price,
+                    location,
+                    booking_id
                 }
             }
             const result = await wishlistCollection.updateOne(filter, updatedDoc, options)
             res.send(result);
         })
-        app.get('/wishlisted/:email', async (req, res) => {
+        app.get('/wishlisted/:email', verifyJWTAuth, async (req, res) => {
             const email = req.params.email;
             const filter = { email }
             const result = await wishlistCollection.find(filter).toArray();
@@ -267,7 +279,14 @@ const run = async () => {
             const result = await usersCollection.find(filter).toArray();
             res.send(result);
         })
-        app.put('/makeverified/:id', async (req, res) => {
+        app.get('/allbuyers', verifyJWTAuth, verifyAdmin, async (req, res) => {
+            const filter = {
+                role: 'buyer'
+            }
+            const result = await usersCollection.find(filter).toArray();
+            res.send(result);
+        })
+        app.put('/makeverified/:id', verifyJWTAuth, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: ObjectId(id) };
             const options = { upsert: true }
@@ -293,12 +312,34 @@ const run = async () => {
             const result = await categoryItemsCollection.updateMany(filter, updatedDoc, options)
             res.send(result)
         })
-        app.delete('/deleteseller/:email', verifyJWTAuth, verifyAdmin, async(req, res) => {
+        app.delete('/deleteseller/:email', verifyJWTAuth, verifyAdmin, async (req, res) => {
             const email = req.params.email;
             const filter = {
                 email: email
             }
             const result = await usersCollection.deleteOne(filter);
+            res.send(result)
+        })
+        app.delete('/deletebuyer/:email', verifyJWTAuth, verifyAdmin, async (req, res) => {
+            const email = req.params.email;
+            const filter = {
+                email: email
+            }
+            const result = await usersCollection.deleteOne(filter);
+            res.send(result)
+        })
+        app.get('/verifyinformation/:email', verifyJWTAuth, verifySeller, async (req, res) => {
+            const email = req.params.email;
+            const filter = {
+                email: email
+            }
+            const result = await usersCollection.findOne(filter);
+            res.send(result);
+        })
+        app.delete('/deleteproduct/', verifyJWTAuth, verifySeller, async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: ObjectId(id) };
+            const result = await categoryItemsCollection.deleteOne(filter);
             res.send(result)
         })
     }
